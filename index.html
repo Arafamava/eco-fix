@@ -11,28 +11,13 @@
             background-color: white;
             border: 1px solid black;
         }
-        button {
-            display: block;
-            margin: 10px auto;
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: green;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: darkgreen;
-        }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
-    <button id="endGameButton">End Game</button>
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
-        const endGameButton = document.getElementById("endGameButton");
 
         // Game settings
         const WIDTH = canvas.width;
@@ -47,7 +32,6 @@
         let dragging = false;
         let bugActive = false;
         let lastBugTime = 0;
-        let lagged = false;
         let gameEnded = false;
 
         // Object settings
@@ -55,6 +39,8 @@
         const trash = { x: Math.random() * 400 + 100, y: Math.random() * 400 + 100, width: 50, height: 50 };
         let offsetX = 0;
         let offsetY = 0;
+
+        let endButtonRect = { x: 350, y: 500, width: 100, height: 40 };
 
         function drawText(text, x, y, color = "red") {
             ctx.fillStyle = color;
@@ -69,6 +55,14 @@
 
         function isMouseInside(mouseX, mouseY, rect) {
             return mouseX > rect.x && mouseX < rect.x + rect.width && mouseY > rect.y && mouseY < rect.y + rect.height;
+        }
+
+        function drawEndButton() {
+            ctx.fillStyle = "green";
+            ctx.fillRect(endButtonRect.x, endButtonRect.y, endButtonRect.width, endButtonRect.height);
+            ctx.fillStyle = "white";
+            ctx.font = "18px Arial";
+            ctx.fillText("End Game", endButtonRect.x + 10, endButtonRect.y + 25);
         }
 
         function sendScoreToQualtrics() {
@@ -99,16 +93,23 @@
             drawText("Recycle Bin", bin.x - 20, bin.y - 10, "green");
             drawRect(trash, "blue");
             drawText("Trash", trash.x - 10, trash.y - 10, "blue");
-
-            // Draw stats
             drawText(`Score: ${score}`, 10, 30);
             drawText(`Retries: ${retries}`, 10, 60);
             drawText(`Time Left: ${Math.ceil((GAME_TIME - elapsedTime) / 1000)}s`, 10, 90);
+            drawEndButton();
         }
 
         canvas.addEventListener("mousedown", (e) => {
             const mouseX = e.offsetX;
             const mouseY = e.offsetY;
+
+            // Check if "End Game" button is clicked
+            if (isMouseInside(mouseX, mouseY, endButtonRect)) {
+                gameEnded = true;
+                sendScoreToQualtrics();
+                updateGame();
+                return;
+            }
 
             if (isMouseInside(mouseX, mouseY, trash)) {
                 dragging = true;
@@ -154,12 +155,6 @@
                 trash.x = e.offsetX - offsetX;
                 trash.y = e.offsetY - offsetY;
             }
-        });
-
-        endGameButton.addEventListener("click", () => {
-            gameEnded = true;
-            sendScoreToQualtrics();
-            updateGame();
         });
 
         function gameLoop() {

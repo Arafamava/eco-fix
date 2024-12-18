@@ -11,13 +11,28 @@
             background-color: white;
             border: 1px solid black;
         }
+        button {
+            display: block;
+            margin: 10px auto;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: green;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: darkgreen;
+        }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <button id="endGameButton">End Game</button>
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
+        const endGameButton = document.getElementById("endGameButton");
 
         // Game settings
         const WIDTH = canvas.width;
@@ -33,6 +48,7 @@
         let bugActive = false;
         let lastBugTime = 0;
         let lagged = false;
+        let gameEnded = false;
 
         // Object settings
         const bin = { x: 600, y: 400, width: 100, height: 150 };
@@ -55,15 +71,22 @@
             return mouseX > rect.x && mouseX < rect.x + rect.width && mouseY > rect.y && mouseY < rect.y + rect.height;
         }
 
+        function sendScoreToQualtrics() {
+            if (window.parent && window.parent.postMessage) {
+                window.parent.postMessage({
+                    gameScore: score,
+                    gameRetries: retries
+                }, "*");
+            }
+        }
+
         function updateGame() {
             const currentTime = Date.now();
             const elapsedTime = currentTime - startTime;
 
-            if (elapsedTime > GAME_TIME) {
+            if (elapsedTime > GAME_TIME || gameEnded) {
                 ctx.clearRect(0, 0, WIDTH, HEIGHT);
                 drawText(`Game Over! Score: ${score} | Retries: ${retries}`, 150, HEIGHT / 2);
-
-                // Send score and retries to Qualtrics
                 sendScoreToQualtrics();
                 return;
             }
@@ -133,27 +156,20 @@
             }
         });
 
+        endGameButton.addEventListener("click", () => {
+            gameEnded = true;
+            sendScoreToQualtrics();
+            updateGame();
+        });
+
         function gameLoop() {
             updateGame();
-            if (Date.now() - startTime < GAME_TIME) {
+            if (!gameEnded) {
                 requestAnimationFrame(gameLoop);
             }
         }
 
         gameLoop();
-
-        function sendScoreToQualtrics() {
-            // Send score and retries to Qualtrics using postMessage
-            const scoreData = score;
-            const retriesData = retries;
-
-            if (window.parent && window.parent.postMessage) {
-                window.parent.postMessage({
-                    gameScore: scoreData,
-                    gameRetries: retriesData
-                }, "*");
-            }
-        }
     </script>
 </body>
 </html>

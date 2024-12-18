@@ -62,6 +62,9 @@
             if (elapsedTime > GAME_TIME) {
                 ctx.clearRect(0, 0, WIDTH, HEIGHT);
                 drawText(`Game Over! Score: ${score} | Retries: ${retries}`, 150, HEIGHT / 2);
+            
+                // Send score and retries to Qualtrics
+                sendScoreToQualtrics();
                 return;
             }
 

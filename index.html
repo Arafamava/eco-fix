@@ -62,7 +62,7 @@
             if (elapsedTime > GAME_TIME) {
                 ctx.clearRect(0, 0, WIDTH, HEIGHT);
                 drawText(`Game Over! Score: ${score} | Retries: ${retries}`, 150, HEIGHT / 2);
-            
+
                 // Send score and retries to Qualtrics
                 sendScoreToQualtrics();
                 return;
@@ -141,6 +141,19 @@
         }
 
         gameLoop();
+
+        function sendScoreToQualtrics() {
+            // Send score and retries to Qualtrics using postMessage
+            const scoreData = score;
+            const retriesData = retries;
+
+            if (window.parent && window.parent.postMessage) {
+                window.parent.postMessage({
+                    gameScore: scoreData,
+                    gameRetries: retriesData
+                }, "*");
+            }
+        }
     </script>
 </body>
 </html>

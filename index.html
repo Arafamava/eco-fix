@@ -150,9 +150,9 @@
             // Check collision with obstacles
             for (const obstacle of obstacles) {
                 if (checkCollision(trash, obstacle)) {
-                    trash.x = Math.random() * 400 + 100;
+                    score = Math.max(0, score - 1); // Deduct a point
+                    trash.x = Math.random() * 400 + 100; // Reset trash position
                     trash.y = Math.random() * 400 + 100;
-                    retries++;
                 }
             }
         }
@@ -192,6 +192,18 @@
 
         canvas.addEventListener("mousemove", (e) => {
             if (dragging) {
+                const currentTime = Date.now();
+                if (!bugActive && Math.random() < BUG_PROBABILITY) {
+                    bugActive = true;
+                    lastBugTime = currentTime;
+                }
+
+                if (bugActive && currentTime - lastBugTime < LAG_DURATION) {
+                    return; // Simulate bug lag
+                } else if (bugActive) {
+                    bugActive = false; // Reset bug
+                }
+
                 trash.x = e.offsetX - offsetX;
                 trash.y = e.offsetY - offsetY;
             }

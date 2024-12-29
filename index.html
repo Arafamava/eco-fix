@@ -100,6 +100,54 @@
             );
         }
 
+        canvas.addEventListener("mousedown", (e) => {
+            const mouseX = e.offsetX;
+            const mouseY = e.offsetY;
+
+            if (isMouseInside(mouseX, mouseY, trash)) {
+                dragging = true;
+                offsetX = mouseX - trash.x;
+                offsetY = mouseY - trash.y;
+            }
+        });
+
+        canvas.addEventListener("mouseup", () => {
+            if (dragging) {
+                dragging = false;
+
+                // Check collision with bin
+                if (checkCollision(trash, bin)) {
+                    score++;
+
+                    trash.x = Math.random() * 400 + 100;
+                    trash.y = Math.random() * 400 + 100;
+                }
+            }
+        });
+
+        canvas.addEventListener("mousemove", (e) => {
+            if (dragging) {
+                const currentTime = Date.now();
+
+                // Check if a bug should be triggered
+                if (!bugActive && Math.random() < BUG_PROBABILITY) {
+                    bugActive = true;
+                    lastBugTime = currentTime;
+                }
+
+                // Handle the bug-induced lag
+                if (bugActive && currentTime - lastBugTime < LAG_DURATION) {
+                    return; // Stop movement temporarily
+                } else if (bugActive) {
+                    bugActive = false; // Reset bug state
+                }
+
+                // Update the trash's position
+                trash.x = e.offsetX - offsetX;
+                trash.y = e.offsetY - offsetY;
+            }
+        });
+
         function updateGame() {
             const currentTime = Date.now();
             const elapsedTime = currentTime - startTime;
@@ -132,57 +180,17 @@
             // Check collision with obstacles
             for (const obstacle of obstacles) {
                 if (checkCollision(trash, obstacle)) {
-                    score = Math.max(0, score - 1); // Deduct a point
+                    // Deduct a point and reset trash position
+                    score = Math.max(0, score - 1); // Prevent negative score
                     trash.x = Math.random() * 400 + 100; // Reset trash position
                     trash.y = Math.random() * 400 + 100;
+
+                    // Flash the screen red for feedback
+                    ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
+                    ctx.fillRect(0, 0, WIDTH, HEIGHT);
                 }
             }
         }
-
-        canvas.addEventListener("mousedown", (e) => {
-            const mouseX = e.offsetX;
-            const mouseY = e.offsetY;
-
-            if (isMouseInside(mouseX, mouseY, trash)) {
-                dragging = true;
-                offsetX = mouseX - trash.x;
-                offsetY = mouseY - trash.y;
-            }
-        });
-
-        canvas.addEventListener("mouseup", () => {
-            if (dragging) {
-                dragging = false;
-
-                // Check collision with bin
-                if (checkCollision(trash, bin)) {
-                    score++;
-
-                    trash.x = Math.random() * 400 + 100;
-                    trash.y = Math.random() * 400 + 100;
-                }
-            }
-        });
-
-        canvas.addEventListener("mousemove", (e) => {
-            if (dragging) {
-                const currentTime = Date.now();
-                if (!bugActive && Math.random() < BUG_PROBABILITY) {
-                    bugActive = true;
-                    lastBugTime = currentTime;
-                }
-
-                if (bugActive && currentTime - lastBugTime < LAG_DURATION) {
-                    // Simulate bug lag
-                    return;
-                } else if (bugActive) {
-                    bugActive = false; // Reset bug
-                }
-
-                trash.x = e.offsetX - offsetX;
-                trash.y = e.offsetY - offsetY;
-            }
-        });
 
         function gameLoop() {
             updateGame();

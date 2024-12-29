@@ -33,6 +33,7 @@
         let bugActive = false;
         let lastBugTime = 0;
         let gameEnded = false;
+        let milestonesReached = 0;
 
         // Object settings
         const bin = { x: 600, y: 400, width: 100, height: 150 };
@@ -40,7 +41,11 @@
         let offsetX = 0;
         let offsetY = 0;
 
-        let endButtonRect = { x: 350, y: 500, width: 100, height: 40 };
+        // Obstacle settings
+        const obstacles = [
+            { x: 200, y: 300, width: 50, height: 50, dx: 2, dy: 1 },
+            { x: 400, y: 200, width: 50, height: 50, dx: -1, dy: 2 },
+        ];
 
         function drawText(text, x, y, color = "red") {
             ctx.fillStyle = color;
@@ -57,14 +62,6 @@
             return mouseX > rect.x && mouseX < rect.x + rect.width && mouseY > rect.y && mouseY < rect.y + rect.height;
         }
 
-        function drawEndButton() {
-            ctx.fillStyle = "green";
-            ctx.fillRect(endButtonRect.x, endButtonRect.y, endButtonRect.width, endButtonRect.height);
-            ctx.fillStyle = "white";
-            ctx.font = "18px Arial";
-            ctx.fillText("End Game", endButtonRect.x + 10, endButtonRect.y + 25);
-        }
-
         function sendScoreToQualtrics() {
             if (window.parent && window.parent.postMessage) {
                 window.parent.postMessage({
@@ -72,6 +69,53 @@
                     gameRetries: retries
                 }, "*");
             }
+        }
+
+        function updateObstacles() {
+            for (const obstacle of obstacles) {
+                obstacle.x += obstacle.dx;
+                obstacle.y += obstacle.dy;
+
+                // Bounce off walls
+                if (obstacle.x <= 0 || obstacle.x + obstacle.width >= WIDTH) {
+                    obstacle.dx *= -1;
+                }
+                if (obstacle.y <= 0 || obstacle.y + obstacle.height >= HEIGHT) {
+                    obstacle.dy *= -1;
+                }
+            }
+        }
+
+        function drawObstacles() {
+            for (const obstacle of obstacles) {
+                drawRect(obstacle, "red");
+            }
+        }
+
+        function checkCollision(rect1, rect2) {
+            return (
+                rect1.x < rect2.x + rect2.width &&
+                rect1.x + rect1.width > rect2.x &&
+                rect1.y < rect2.y + rect2.height &&
+                rect1.y + rect1.height > rect2.y
+            );
+        }
+
+        function drawFireworks() {
+            for (let i = 0; i < 20; i++) {
+                const x = Math.random() * WIDTH;
+                const y = Math.random() * HEIGHT / 2;
+                const size = Math.random() * 5 + 2;
+                ctx.fillStyle = `rgb(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255})`;
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function animateTrashIntoBin() {
+            trash.width *= 0.9;
+            trash.height *= 0.9;
         }
 
         function updateGame() {
@@ -93,23 +137,29 @@
             drawText("Recycle Bin", bin.x - 20, bin.y - 10, "green");
             drawRect(trash, "blue");
             drawText("Trash", trash.x - 10, trash.y - 10, "blue");
+            drawObstacles();
+
+            // Draw stats
             drawText(`Score: ${score}`, 10, 30);
             drawText(`Retries: ${retries}`, 10, 60);
             drawText(`Time Left: ${Math.ceil((GAME_TIME - elapsedTime) / 1000)}s`, 10, 90);
-            drawEndButton();
+
+            // Update obstacles
+            updateObstacles();
+
+            // Check collision with obstacles
+            for (const obstacle of obstacles) {
+                if (checkCollision(trash, obstacle)) {
+                    trash.x = Math.random() * 400 + 100;
+                    trash.y = Math.random() * 400 + 100;
+                    retries++;
+                }
+            }
         }
 
         canvas.addEventListener("mousedown", (e) => {
             const mouseX = e.offsetX;
             const mouseY = e.offsetY;
-
-            // Check if "End Game" button is clicked
-            if (isMouseInside(mouseX, mouseY, endButtonRect)) {
-                gameEnded = true;
-                sendScoreToQualtrics();
-                updateGame();
-                return;
-            }
 
             if (isMouseInside(mouseX, mouseY, trash)) {
                 dragging = true;
@@ -120,38 +170,28 @@
 
         canvas.addEventListener("mouseup", () => {
             if (dragging) {
-                retries++;
                 dragging = false;
 
                 // Check collision with bin
-                if (
-                    trash.x < bin.x + bin.width &&
-                    trash.x + trash.width > bin.x &&
-                    trash.y < bin.y + bin.height &&
-                    trash.y + trash.height > bin.y
-                ) {
+                if (checkCollision(trash, bin)) {
                     score++;
+                    animateTrashIntoBin();
+
+                    if (score % 5 === 0) {
+                        drawFireworks();
+                        milestonesReached++;
+                    }
+
                     trash.x = Math.random() * 400 + 100;
                     trash.y = Math.random() * 400 + 100;
+                    trash.width = 50;
+                    trash.height = 50;
                 }
             }
         });
 
         canvas.addEventListener("mousemove", (e) => {
             if (dragging) {
-                const currentTime = Date.now();
-                if (!bugActive && Math.random() < BUG_PROBABILITY) {
-                    bugActive = true;
-                    lastBugTime = currentTime;
-                }
-
-                if (bugActive && currentTime - lastBugTime < LAG_DURATION) {
-                    // Simulate bug lag
-                    return;
-                } else if (bugActive) {
-                    bugActive = false; // Reset bug
-                }
-
                 trash.x = e.offsetX - offsetX;
                 trash.y = e.offsetY - offsetY;
             }

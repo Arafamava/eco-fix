@@ -23,7 +23,12 @@
         const WIDTH = canvas.width;
         const HEIGHT = canvas.height;
         const BUG_PROBABILITY = 0.3; // Chance of a bug occurring
-        const LAG_DURATION = 1000; // Bug lag in milliseconds
+         // Bug lag in milliseconds
+        let currentLagDuration = 0; // Holds the randomized lag duration
+
+        function getRandomLagDuration() {
+            return Math.random() * (2000 - 1000) + 1000; // Random between 1000ms and 2000ms
+        }
         const GAME_TIME = 60000; // Game duration in milliseconds
 
         let score = 0;
@@ -124,24 +129,25 @@
                 }
             }
         });
-
+        
         canvas.addEventListener("mousemove", (e) => {
             if (dragging) {
                 const currentTime = Date.now();
-
+        
                 // Check if a bug should be triggered
                 if (!bugActive && Math.random() < BUG_PROBABILITY) {
                     bugActive = true;
                     lastBugTime = currentTime;
+                    currentLagDuration = getRandomLagDuration(); // Set random lag duration
                 }
-
+        
                 // Handle the bug-induced lag
-                if (bugActive && currentTime - lastBugTime < LAG_DURATION) {
+                if (bugActive && currentTime - lastBugTime < currentLagDuration) {
                     return; // Stop movement temporarily
                 } else if (bugActive) {
                     bugActive = false; // Reset bug state
                 }
-
+        
                 // Update the trash's position
                 trash.x = e.offsetX - offsetX;
                 trash.y = e.offsetY - offsetY;
